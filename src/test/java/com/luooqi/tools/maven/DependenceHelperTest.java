@@ -20,4 +20,15 @@ public class DependenceHelperTest
         List<DependenceInfo> list = DependenceHelper.getDependenceListByPom("D:\\Code\\Github\\maven-dependency-downloader.git\\trunk\\pom.xml");
         System.out.println(list);
     }
+
+    @Test
+    public void getDependenceByInfo()
+    {
+        DependenceHelper.getDependenceByInfo();
+    }
+
+    @Test
+    public void downloadDependence()
+    {
+    }
 }
