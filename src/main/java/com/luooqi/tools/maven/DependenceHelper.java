@@ -71,31 +71,24 @@ public class DependenceHelper
         RepositorySystem system = newRepositorySystem(locator);
         RepositorySystemSession session = newSession(system);
 
-        RemoteRepository central = new RemoteRepository.Builder("central", "default", "http://repo1.maven.org/maven2/").build();
-
-        Artifact artifact = new DefaultArtifact("cn.hutool:hutool-log:4.1.1");
-        ArtifactDescriptorRequest request = new ArtifactDescriptorRequest(artifact, Collections.singletonList(central), null);
-        ArtifactDescriptorResult result = null;
-        String theScope = JavaScopes.COMPILE; // Replace with your Artifact
+        Artifact artifact = new DefaultArtifact("org.elasticsearch.client:elasticsearch-rest-high-level-client:6.0.1");
+        String theScope = JavaScopes.COMPILE;
         DependencyFilter theDependencyFilter = DependencyFilterUtils.classpathFilter(theScope);
 
+        RemoteRepository central = new RemoteRepository.Builder("central", "default", "http://repo1.maven.org/maven2/").build();
+        RemoteRepository central1 = new RemoteRepository.Builder("central1", "default1", "http://central.maven.org/maven2/").build();
         CollectRequest theCollectRequest = new CollectRequest();
         theCollectRequest.setRoot(new org.eclipse.aether.graph.Dependency(artifact, theScope));
-        //for (RemoteRepository theRepository : remoteRepositories) {
-            theCollectRequest.addRepository(central);
-        //}
+        theCollectRequest.addRepository(central);
+        theCollectRequest.addRepository(central1);
+
         DependencyRequest theDependencyRequest = new DependencyRequest(theCollectRequest, theDependencyFilter);
         try
         {
-            //result = system.readArtifactDescriptor(session, request);
             DependencyResult theDependencyResult = system.resolveDependencies(session, theDependencyRequest);
             for (ArtifactResult theArtifactResult : theDependencyResult.getArtifactResults()) {
                 Artifact theResolved = theArtifactResult.getArtifact();
                 System.out.println(theResolved);
-                // Now we have the artifact file locally stored available
-                // and we can do something with it
-                File theLocallyStoredFile = theResolved.getFile();
-                //theResult.add(theLocallyStoredFile);
             }
         }
         catch (Exception e)
@@ -120,9 +113,9 @@ public class DependenceHelper
 
     private static RepositorySystemSession newSession(RepositorySystem system) {
         DefaultRepositorySystemSession session = MavenRepositorySystemUtils.newSession();
-        LocalRepository localRepo = new LocalRepository("target/local-repo");
+        LocalRepository localRepo = new LocalRepository("D:/jest/local-repo");
         session.setLocalRepositoryManager(system.newLocalRepositoryManager(session, localRepo));
-        // set possible proxies and mirrors
+        // set possible proxies and mirrorsD:
         //session.setProxySelector(new DefaultProxySelector().add(new Proxy(Proxy.TYPE_HTTP, "host", 3625), Arrays.asList("localhost", "127.0.0.1")));
         //session.setMirrorSelector(new DefaultMirrorSelector().add("my-mirror", "http://mirror", "default", false, "external:*", null));
         return session;
