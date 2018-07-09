@@ -53,7 +53,7 @@ public class DependenceHelper
         }
         request.setPomFile(file);
         request.setGoals(Collections.singletonList("dependency:tree"));
-        String output = getInvokeOutput(request);
+        String output = getInvokeOutput(request, "");
         if (StrUtil.isBlank(output))
         {
             return null;
@@ -137,13 +137,22 @@ public class DependenceHelper
         return session;
     }
 
-    private static String getInvokeOutput(InvocationRequest request) throws FileNotFoundException
+    /**
+     * 根据请求获取最终的控制台输出文本信息
+     * @param request 请求
+     * @return 控制台输出文本
+     */
+    private static String getInvokeOutput(InvocationRequest request, String localRepo) throws FileNotFoundException
     {
         Invoker invoker = new DefaultInvoker();
         String mavenHome = getMavenHome();
         if (StrUtil.isBlank(mavenHome))
         {
             throw new FileNotFoundException("未检测到MAVEN_HOME，请在环境变量中进行配置。");
+        }
+        if (StrUtil.isNotBlank(localRepo))
+        {
+            invoker.setLocalRepositoryDirectory(new File(localRepo));
         }
         invoker.setMavenHome(new File(mavenHome));
         StringBuilderOutputHandler outputHandler = new StringBuilderOutputHandler();
@@ -248,5 +257,33 @@ public class DependenceHelper
         }
         StaticLog.info("----------------------------------------");
         StaticLog.info("下载完成，总依赖个数：" + resultList.size());
+    }
+
+    public static void downloadDeps(String pomFilePath, String repositoryPath) throws FileNotFoundException
+    {
+        InvocationRequest request = new DefaultInvocationRequest();
+        File file = new File(pomFilePath);
+        if (!file.exists())
+        {
+            throw new FileNotFoundException("pom文件路径有误：" + pomFilePath);
+        }
+        request.setPomFile(file);
+        request.setGoals(Collections.singletonList("dependency:resolve"));
+
+        //request.setBaseDirectory(new File(repositoryPath));
+
+        String output = getInvokeOutput(request, repositoryPath);
+        if (StrUtil.isBlank(output))
+        {
+            return;
+        }
+        System.out.println(output);
+        Matcher matcher = depPattern.matcher(output);
+        List<DependenceInfo> result = new ArrayList<DependenceInfo>();
+        while (matcher.find())
+        {
+            DependenceInfo dependenceInfo = new DependenceInfo(matcher.group(1),matcher.group(2),matcher.group(3),matcher.group(4));
+            result.add(dependenceInfo);
+        }
     }
 }

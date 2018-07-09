@@ -28,7 +28,8 @@ public class DependenceHelperTest
     }
 
     @Test
-    public void downloadDependence()
+    public void downloadDependence() throws FileNotFoundException
     {
+        DependenceHelper.downloadDeps("D:\\Code\\Github\\maven-dependency-downloader.git\\trunk\\pom.xml", "d:/resolve/");
     }
 }
