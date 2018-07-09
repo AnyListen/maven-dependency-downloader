@@ -95,12 +95,12 @@ public class DependenceHelper
         Artifact artifact = new DefaultArtifact(artifactStr);
         DependencyFilter theDependencyFilter = DependencyFilterUtils.classpathFilter(theScope);
 
-        RemoteRepository central = new RemoteRepository.Builder("central", "default", "http://repo1.maven.org/maven2/").build();
-        RemoteRepository central1 = new RemoteRepository.Builder("central1", "default1", "http://central.maven.org/maven2/").build();
+        //RemoteRepository central = new RemoteRepository.Builder("central", "default", "http://repo1.maven.org/maven2/").build();
+        RemoteRepository central = new RemoteRepository.Builder("central", "default", "http://central.maven.org/maven2/").build();
         CollectRequest theCollectRequest = new CollectRequest();
         theCollectRequest.setRoot(new org.eclipse.aether.graph.Dependency(artifact, theScope));
+        //theCollectRequest.addRepository(central);
         theCollectRequest.addRepository(central);
-        theCollectRequest.addRepository(central1);
 
         DependencyRequest theDependencyRequest = new DependencyRequest(theCollectRequest, theDependencyFilter);
         List<DependenceInfo> resultList = new ArrayList<DependenceInfo>();
@@ -233,7 +233,7 @@ public class DependenceHelper
             return;
         }
         List<DependenceInfo> resultList = new ArrayList<DependenceInfo>();
-        StaticLog.info("正在下载中：");
+        System.out.println("开始下载：");
         for (DependenceInfo dep:depList)
         {
             List<DependenceInfo> list = downloadDependency(dep.toString(), repositoryPath, scope);
@@ -242,7 +242,7 @@ public class DependenceHelper
                 resultList.addAll(list);
                 for(DependenceInfo dep1:list)
                 {
-                    StaticLog.info("已下载：" + dep1);
+                    System.out.println("已下载：" + dep1);
                 }
             }
         }
