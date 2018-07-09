@@ -1,6 +1,6 @@
 package com.luooqi.tools.maven;
 
-import cn.hutool.json.JSONUtil;
+import cn.hutool.core.util.StrUtil;
 
 /**
  * maven-dependency-downloader
@@ -66,6 +66,6 @@ public class DependenceInfo
     @Override
     public String toString()
     {
-        return JSONUtil.toJsonStr(this);
+        return StrUtil.format("{}:{}:{}", this.getGroupId(), this.getArtifactId(), this.getVersion());
     }
 }

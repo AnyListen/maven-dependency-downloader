@@ -22,9 +22,9 @@ public class DependenceHelperTest
     }
 
     @Test
-    public void getDependenceByInfo()
+    public void getDependenceByInfo() throws FileNotFoundException
     {
-        DependenceHelper.getDependenceByInfo();
+        DependenceHelper.downloadDependenceWithPomFile("D:\\Code\\Github\\maven-dependency-downloader.git\\trunk\\pom.xml", "d:/my_test/");
     }
 
     @Test

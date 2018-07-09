@@ -11,11 +11,9 @@ import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.collection.CollectRequest;
 import org.eclipse.aether.connector.basic.BasicRepositoryConnectorFactory;
-import org.eclipse.aether.graph.Dependency;
 import org.eclipse.aether.graph.DependencyFilter;
 import org.eclipse.aether.impl.DefaultServiceLocator;
 import org.eclipse.aether.repository.LocalRepository;
-import org.eclipse.aether.repository.Proxy;
 import org.eclipse.aether.repository.RemoteRepository;
 import org.eclipse.aether.resolution.*;
 import org.eclipse.aether.spi.connector.RepositoryConnectorFactory;
@@ -24,8 +22,6 @@ import org.eclipse.aether.transport.file.FileTransporterFactory;
 import org.eclipse.aether.transport.http.HttpTransporterFactory;
 import org.eclipse.aether.util.artifact.JavaScopes;
 import org.eclipse.aether.util.filter.DependencyFilterUtils;
-import org.eclipse.aether.util.repository.DefaultMirrorSelector;
-import org.eclipse.aether.util.repository.DefaultProxySelector;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -40,6 +36,13 @@ import java.util.regex.Pattern;
 public class DependenceHelper
 {
     private static final Pattern depPattern = Pattern.compile("\\[INFO][^\\w]+([\\w.\\-]+):([\\w.\\-]+):jar:([\\w.\\-]+):([\\w.\\-]+)");
+
+    /**
+     * 根据POM文件获取全部依赖信息
+     * @param pomFilePath POM文件路径
+     * @return 全部依赖信息
+     * @throws FileNotFoundException MAVEN_HOME或者POM文件不存在
+     */
     public static List<DependenceInfo> getDependenceListByPom(String pomFilePath) throws FileNotFoundException
     {
         InvocationRequest request = new DefaultInvocationRequest();
@@ -65,14 +68,31 @@ public class DependenceHelper
         return result;
     }
 
-    public static String getDependenceByInfo()
+    /**
+     * 根据Artifact信息下载其相关依赖（默认Scope为COMPILE），并存储到指定的文件夹
+     * @param artifactStr Artifact信息，例如：org.apache.maven.shared:maven-invoker:3.0.1
+     * @param storePath 存储的路径
+     * @return 全部依赖信息
+     */
+    public static List<DependenceInfo> downloadDependency(String artifactStr, String storePath)
+    {
+        return downloadDependency(artifactStr, storePath, JavaScopes.COMPILE);
+    }
+
+    /**
+     * 根据Artifact信息下载其相关依赖，并存储到指定的文件夹
+     * @param artifactStr Artifact信息，例如：org.apache.maven.shared:maven-invoker:3.0.1
+     * @param storePath 存储的路径
+     * @param theScope Scope
+     * @return 全部依赖信息
+     */
+    public static List<DependenceInfo> downloadDependency(String artifactStr, String storePath, String theScope)
     {
         DefaultServiceLocator locator = MavenRepositorySystemUtils.newServiceLocator();
         RepositorySystem system = newRepositorySystem(locator);
-        RepositorySystemSession session = newSession(system);
+        RepositorySystemSession session = newSession(system, storePath);
 
-        Artifact artifact = new DefaultArtifact("org.elasticsearch.client:elasticsearch-rest-high-level-client:6.0.1");
-        String theScope = JavaScopes.COMPILE;
+        Artifact artifact = new DefaultArtifact(artifactStr);
         DependencyFilter theDependencyFilter = DependencyFilterUtils.classpathFilter(theScope);
 
         RemoteRepository central = new RemoteRepository.Builder("central", "default", "http://repo1.maven.org/maven2/").build();
@@ -83,25 +103,21 @@ public class DependenceHelper
         theCollectRequest.addRepository(central1);
 
         DependencyRequest theDependencyRequest = new DependencyRequest(theCollectRequest, theDependencyFilter);
+        List<DependenceInfo> resultList = new ArrayList<DependenceInfo>();
         try
         {
             DependencyResult theDependencyResult = system.resolveDependencies(session, theDependencyRequest);
             for (ArtifactResult theArtifactResult : theDependencyResult.getArtifactResults()) {
                 Artifact theResolved = theArtifactResult.getArtifact();
-                System.out.println(theResolved);
+                DependenceInfo depInfo = new DependenceInfo(theResolved.getGroupId(), theResolved.getArtifactId(), theResolved.getVersion(), JavaScopes.COMPILE);
+                resultList.add(depInfo);
             }
         }
         catch (Exception e)
         {
             e.printStackTrace();
         }
-
-//        assert result != null;
-//        for (Dependency dependency : result.getDependencies()) {
-//            System.out.println(dependency);
-//        }
-
-        return "";
+        return resultList;
     }
 
     private static RepositorySystem newRepositorySystem(DefaultServiceLocator locator) {
@@ -111,9 +127,9 @@ public class DependenceHelper
         return locator.getService(RepositorySystem.class);
     }
 
-    private static RepositorySystemSession newSession(RepositorySystem system) {
+    private static RepositorySystemSession newSession(RepositorySystem system, String storePath) {
         DefaultRepositorySystemSession session = MavenRepositorySystemUtils.newSession();
-        LocalRepository localRepo = new LocalRepository("D:/jest/local-repo");
+        LocalRepository localRepo = new LocalRepository(storePath);
         session.setLocalRepositoryManager(system.newLocalRepositoryManager(session, localRepo));
         // set possible proxies and mirrorsD:
         //session.setProxySelector(new DefaultProxySelector().add(new Proxy(Proxy.TYPE_HTTP, "host", 3625), Arrays.asList("localhost", "127.0.0.1")));
@@ -150,6 +166,9 @@ public class DependenceHelper
         return null;
     }
 
+    /**
+     * 获取Maven_Home
+     */
     private static String getMavenHome()
     {
         String[] arr = new String[]{"MAVEN_HOME", "MVN_HOME", "M2_HOME", "M3_HOME"};
@@ -186,8 +205,48 @@ public class DependenceHelper
         return null;
     }
 
-    public static void downloadDependence(String pomFilePath, String repositoryPath)
-    {
 
+    /**
+     * 根据pom.xml下载全部依赖（默认作用于为COMPILE）到指定的路径
+     * @param pomFilePath POM文件路径
+     * @param repositoryPath 存储的路径
+     * @throws FileNotFoundException MAVEN_HOME或者POM文件不存在
+     */
+    public static void downloadDependenceWithPomFile(String pomFilePath, String repositoryPath) throws FileNotFoundException
+    {
+        downloadDependenceWithPomFile(pomFilePath, repositoryPath, JavaScopes.COMPILE);
+    }
+
+    /**
+     * 根据pom.xml下载全部依赖到指定的路径
+     * @param pomFilePath POM文件路径
+     * @param repositoryPath 存储的路径
+     * @param scope 作用域
+     * @throws FileNotFoundException MAVEN_HOME或者POM文件不存在
+     */
+    public static void downloadDependenceWithPomFile(String pomFilePath, String repositoryPath, String scope) throws FileNotFoundException
+    {
+        List<DependenceInfo> depList = getDependenceListByPom(pomFilePath);
+        if (depList == null)
+        {
+            StaticLog.info("未解析到任何依赖！");
+            return;
+        }
+        List<DependenceInfo> resultList = new ArrayList<DependenceInfo>();
+        StaticLog.info("正在下载中：");
+        for (DependenceInfo dep:depList)
+        {
+            List<DependenceInfo> list = downloadDependency(dep.toString(), repositoryPath, scope);
+            if (list != null && list.size() > 0)
+            {
+                resultList.addAll(list);
+                for(DependenceInfo dep1:list)
+                {
+                    StaticLog.info("已下载：" + dep1);
+                }
+            }
+        }
+        StaticLog.info("----------------------------------------");
+        StaticLog.info("下载完成，总依赖个数：" + resultList.size());
     }
 }
